@@ -127,6 +127,18 @@ mod tests {
         assert_eq!(chunks.remainder(), &[]);
     }
 
+    #[test]
+    fn memory_leak() {
+        let mut chunks = [Box::new(123), Box::new(234)]
+            .into_iter()
+            .array_chunks::<3>();
+
+        assert_eq!(chunks.next(), None);
+        // The two elements are now in the half-initialized buffer. Let's check if the ArrayChunks
+        // Drop impl deinitializes them properly
+        drop(chunks);
+    }
+
     // TODO: try to get this working. The problem is std::panic::catch_unwind requires the closure
     // to be UnwindSafe which it isn't (for some reason) due to capturing &mut ArrayChunks.
     /* #[test]
