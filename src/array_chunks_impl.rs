@@ -4,6 +4,7 @@
 use core::mem::MaybeUninit;
 
 /// Iterator adapter like [`slice::array_chunks`] but for any iterator
+#[derive(Debug)]
 pub struct ArrayChunks<I, T, const N: usize> {
     iter: I,
     buf: [MaybeUninit<T>; N],
@@ -49,6 +50,14 @@ where
         let chunk = unsafe { MaybeUninit::array_assume_init(core::ptr::read(&self.buf)) };
         self.num_init = 0;
         Some(chunk)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (min_items, max_items) = self.iter.size_hint();
+        let min_chunks = (min_items.saturating_add(self.num_init)) / N;
+        let max_chunks =
+            max_items.and_then(|max_items| Some(max_items.checked_add(self.num_init)? / N));
+        (min_chunks, max_chunks)
     }
 }
 

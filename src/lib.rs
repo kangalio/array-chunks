@@ -139,6 +139,34 @@ mod tests {
         drop(chunks);
     }
 
+    #[test]
+    fn debug() {
+        let mut chunks = (0..7).array_chunks::<3>();
+        assert_eq!(
+            format!("{:?}", chunks),
+            "ArrayChunks { iter: 0..7, buf: [\
+                core::mem::maybe_uninit::MaybeUninit<i32>, \
+                core::mem::maybe_uninit::MaybeUninit<i32>, \
+                core::mem::maybe_uninit::MaybeUninit<i32>\
+            ], num_init: 0 }"
+        );
+    }
+
+    #[test]
+    fn size_hint() {
+        let mut chunks = (0..7).array_chunks::<3>();
+
+        assert_eq!(chunks.size_hint(), (2, Some(2)));
+        assert_eq!(chunks.next(), Some([0, 1, 2]));
+        assert_eq!(chunks.size_hint(), (1, Some(1)));
+
+        let mut chunks = (0..).array_chunks::<3>();
+
+        assert_eq!(chunks.size_hint(), (usize::MAX / 3, None));
+        assert_eq!(chunks.next(), Some([0, 1, 2]));
+        assert_eq!(chunks.size_hint(), (usize::MAX / 3, None));
+    }
+
     // TODO: try to get this working. The problem is std::panic::catch_unwind requires the closure
     // to be UnwindSafe which it isn't (for some reason) due to capturing &mut ArrayChunks.
     /* #[test]
