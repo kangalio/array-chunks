@@ -63,6 +63,27 @@ where
     }
 }
 
+impl<I, T, const N: usize> Clone for ArrayChunks<I, T, N>
+where
+    I: Clone,
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        let mut buf = MaybeUninit::uninit_array();
+        for (src, dst) in self.buf.iter().zip(&mut buf).take(self.num_init) {
+            // SAFETY: we're only reading the first self.num_init elements of self.buf, which we
+            // guarantee to be initialized
+            *dst = MaybeUninit::new(unsafe { src.assume_init_ref() }.clone());
+        }
+
+        Self {
+            iter: self.iter.clone(),
+            buf,
+            num_init: self.num_init,
+        }
+    }
+}
+
 impl<I, T, const N: usize> Drop for ArrayChunks<I, T, N> {
     fn drop(&mut self) {
         for item in &mut self.buf[..self.num_init] {

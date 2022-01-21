@@ -167,6 +167,32 @@ mod tests {
         assert_eq!(chunks.size_hint(), (usize::MAX / 3, None));
     }
 
+    #[test]
+    fn clone() {
+        #[derive(Clone)]
+        struct NonFusedIterator(bool);
+        impl Iterator for NonFusedIterator {
+            type Item = Box<u32>;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.0 = !self.0;
+                if self.0 {
+                    Some(Box::new(123))
+                } else {
+                    None
+                }
+            }
+        }
+        let iter = NonFusedIterator(false);
+
+        let mut chunks = iter.array_chunks();
+        assert_eq!(chunks.next(), None);
+
+        let mut chunks2 = chunks.clone();
+        assert_eq!(chunks.next(), Some([Box::new(123), Box::new(123)]));
+        assert_eq!(chunks2.next(), Some([Box::new(123), Box::new(123)]));
+    }
+
     // TODO: try to get this working. The problem is std::panic::catch_unwind requires the closure
     // to be UnwindSafe which it isn't (for some reason) due to capturing &mut ArrayChunks.
     /* #[test]
