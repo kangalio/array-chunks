@@ -77,6 +77,56 @@ mod tests {
         assert_eq!(chunks.next(), None);
     }
 
+    // Used to cause double-free
+    // https://discord.com/channels/273534239310479360/933858432954536027/934038098520719361
+    #[test]
+    fn non_fused_source_iterator_1() {
+        let mut toggle = false;
+        let iter = std::iter::from_fn(|| {
+            toggle = !toggle;
+            if toggle {
+                Some(Box::new("hi"))
+            } else {
+                None
+            }
+        });
+
+        let mut chunks = iter.array_chunks::<2>();
+        chunks.next();
+        chunks.next();
+    }
+
+    #[test]
+    fn non_fused_source_iterator_2() {
+        let mut toggle = false;
+        let mut i = 0;
+        let iter = std::iter::from_fn(|| {
+            toggle = !toggle;
+            if toggle {
+                i += 1;
+                Some(i)
+            } else {
+                None
+            }
+        });
+
+        let mut chunks = iter.array_chunks::<2>();
+
+        assert_eq!(chunks.next(), None); // reading Some(1) and None
+        assert_eq!(chunks.remainder(), &[1]);
+        assert_eq!(chunks.next(), Some([1, 2])); // reading Some(2)
+        assert_eq!(chunks.remainder(), &[]);
+        assert_eq!(chunks.next(), None); // reading None
+        assert_eq!(chunks.remainder(), &[]);
+
+        assert_eq!(chunks.next(), None); // reading Some(3) and None
+        assert_eq!(chunks.remainder(), &[3]);
+        assert_eq!(chunks.next(), Some([3, 4])); // reading Some(4)
+        assert_eq!(chunks.remainder(), &[]);
+        assert_eq!(chunks.next(), None); // reading None
+        assert_eq!(chunks.remainder(), &[]);
+    }
+
     // TODO: try to get this working. The problem is std::panic::catch_unwind requires the closure
     // to be UnwindSafe which it isn't (for some reason) due to capturing &mut ArrayChunks.
     /* #[test]
@@ -84,7 +134,7 @@ mod tests {
         // This iterator yields 1, 2... 7, then panics. After the panic, 9, 10... is yielded
         let panics_at_eight = (1..).inspect(|&i| {
             if i == 8 {
-                panic!();
+                std::panic::resume_unwind(Box::new("panic payload"));
             }
         });
         let mut chunks = panics_at_eight.array_chunks();

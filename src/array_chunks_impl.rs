@@ -36,7 +36,7 @@ where
     type Item = [T; N];
 
     fn next(&mut self) -> Option<Self::Item> {
-        for slot in &mut self.buf {
+        for slot in &mut self.buf[self.num_init..] {
             *slot = MaybeUninit::new(self.iter.next()?);
             self.num_init += 1;
         }
