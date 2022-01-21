@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn debug() {
-        let mut chunks = (0..7).array_chunks::<3>();
+        let chunks = (0..7).array_chunks::<3>();
         assert_eq!(
             format!("{:?}", chunks),
             "ArrayChunks { iter: 0..7, buf: [\
