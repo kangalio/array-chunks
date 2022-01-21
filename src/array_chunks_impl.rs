@@ -37,7 +37,9 @@ where
     type Item = [T; N];
 
     fn next(&mut self) -> Option<Self::Item> {
-        for slot in &mut self.buf[self.num_init..] {
+        // SAFETY: self.num_init can never be `> self.buf.len()` because self.num_init is only
+        // incremented in this loop, which runs `self.buf.len() - self.num_init` times
+        for slot in unsafe { self.buf.get_unchecked_mut(self.num_init..) } {
             *slot = MaybeUninit::new(self.iter.next()?);
             self.num_init += 1;
         }
