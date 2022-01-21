@@ -65,10 +65,10 @@ where
 
 impl<I, T, const N: usize> Drop for ArrayChunks<I, T, N> {
     fn drop(&mut self) {
-        for item in &self.buf[..self.num_init] {
+        for item in &mut self.buf[..self.num_init] {
             // SAFETY: the Iterator::next() implementation ensures buf[..num_init] is in an
             // initialized state at any point in time
-            unsafe { drop(item.assume_init_read()) }
+            unsafe { item.assume_init_drop() };
         }
     }
 }
